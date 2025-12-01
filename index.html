@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Hello WASM from Rust</title>
+</head>
+<body>
+    <script type="module">
+        import init, { hello } from './pkg/hello_wasm.js';
+
+        async function run() {
+            // Инициализируем wasm модуль
+            await init();
+
+            // Вызываем функцию hello из Rust
+            const result = hello();
+            console.log(result);
+
+            // Выводим результат на страницу
+            document.body.innerHTML = `<h1>${result}</h1>`;
+        }
+
+        run().catch(console.error);
+    </script>
+</body>
+</html>
