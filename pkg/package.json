@@ -1,14 +1,14 @@
 {
-  "name": "hello-wasm",
+  "name": "rust-wasm-crypto",
   "type": "module",
   "version": "0.1.0",
   "files": [
-    "hello_wasm_bg.wasm",
-    "hello_wasm.js",
-    "hello_wasm.d.ts"
+    "rust_wasm_crypto_bg.wasm",
+    "rust_wasm_crypto.js",
+    "rust_wasm_crypto.d.ts"
   ],
-  "main": "hello_wasm.js",
-  "types": "hello_wasm.d.ts",
+  "main": "rust_wasm_crypto.js",
+  "types": "rust_wasm_crypto.d.ts",
   "sideEffects": [
     "./snippets/*"
   ]

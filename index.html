@@ -1,26 +1,359 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta charset="utf-8">
-    <title>Hello WASM from Rust</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rust WASM Crypto Demo</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #007bff;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        textarea {
+            width: 100%;
+            height: 100px;
+            font-family: 'Courier New', monospace;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin: 10px 0;
+            resize: vertical;
+        }
+        .result {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            word-break: break-all;
+        }
+        .controls {
+            margin: 10px 0;
+        }
+        .label {
+            font-weight: bold;
+            margin: 10px 0 5px 0;
+            display: block;
+        }
+        code {
+            background: #e9ecef;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
 </head>
 <body>
+    <h1>🔐 Rust WASM Crypto Demo</h1>
+    
+    <!-- Симметричное шифрование -->
+    <div class="section">
+        <h2>🔑 Симметричное шифрование (AES-256-GCM)</h2>
+        
+        <div class="controls">
+            <button onclick="generateSymmetricKey()">Сгенерировать симметричный ключ</button>
+        </div>
+        
+        <div class="label">Симметричный ключ (32 байта, hex):</div>
+        <textarea id="symmetricKey" placeholder="Сгенерируйте ключ..."></textarea>
+        
+        <div class="label">Текст для шифрования:</div>
+        <textarea id="symmetricText">Привет, мир! Это тестовое сообщение.</textarea>
+        
+        <div class="controls">
+            <button onclick="encryptSymmetric()">Зашифровать</button>
+            <button onclick="decryptSymmetric()">Расшифровать</button>
+        </div>
+        
+        <div class="label">Результат:</div>
+        <div class="result" id="symmetricResult"></div>
+    </div>
+    
+    <!-- Асимметричное шифрование -->
+    <div class="section">
+        <h2>🗝️ Асимметричное шифрование (RSA-2048)</h2>
+        
+        <div class="controls">
+            <button onclick="generateAsymmetricKeypair()">Сгенерировать ключевую пару</button>
+        </div>
+        
+        <div class="label">Приватный ключ (PEM):</div>
+        <textarea id="privateKey" placeholder="Будет сгенерирован..."></textarea>
+        
+        <div class="label">Публичный ключ (PEM):</div>
+        <textarea id="publicKey" placeholder="Будет сгенерирован..."></textarea>
+        
+        <div class="label">Текст для шифрования:</div>
+        <textarea id="asymmetricText">Секретное сообщение для RSA</textarea>
+        
+        <div class="controls">
+            <button onclick="encryptAsymmetric()">Зашифровать публичным ключом</button>
+            <button onclick="decryptAsymmetric()">Расшифровать приватным ключом</button>
+        </div>
+        
+        <div class="label">Результат:</div>
+        <div class="result" id="asymmetricResult"></div>
+    </div>
+    
+    <!-- Утилиты -->
+    <div class="section">
+        <h2>🛠️ Утилиты</h2>
+        
+        <div class="controls">
+            <button onclick="generateRandomBytes()">Сгенерировать случайные байты</button>
+            <button onclick="hashData()">Вычислить SHA-256</button>
+        </div>
+        
+        <div class="label">Данные для хеширования:</div>
+        <textarea id="hashText">Данные для хеширования</textarea>
+        
+        <div class="label">Результат:</div>
+        <div class="result" id="utilsResult"></div>
+    </div>
+    
+    <!-- Консоль разработчика -->
+    <div class="section">
+        <h2>💻 Для консоли разработчика</h2>
+        <p>Все функции доступны глобально через <code>window.cryptoAPI</code></p>
+        <pre><code>
+// Доступные функции:
+window.cryptoAPI.generate_symmetric_key()
+window.cryptoAPI.encrypt_symmetric(plaintext, keyHex)
+window.cryptoAPI.decrypt_symmetric(encryptedJson, keyHex)
+window.cryptoAPI.generate_asymmetric_keypair()
+window.cryptoAPI.encrypt_asymmetric(plaintext, publicKeyPem)
+window.cryptoAPI.decrypt_asymmetric(ciphertextHex, privateKeyPem)
+window.cryptoAPI.hash_sha256(data)
+window.cryptoAPI.generate_random_bytes(count)
+        </code></pre>
+    </div>
+
     <script type="module">
-        import init, { hello } from './pkg/hello_wasm.js';
-
-        async function run() {
-            // Инициализируем wasm модуль
-            await init();
-
-            // Вызываем функцию hello из Rust
-            const result = hello();
-            console.log(result);
-
-            // Выводим результат на страницу
-            document.body.innerHTML = `<h1>${result}</h1>`;
+        import init, { 
+            generate_symmetric_key,
+            encrypt_symmetric,
+            decrypt_symmetric,
+            generate_asymmetric_keypair,
+            encrypt_asymmetric,
+            decrypt_asymmetric,
+            hash_sha256,
+            generate_random_bytes
+        } from './pkg/rust_wasm_crypto.js';
+        
+        let wasmInitialized = false;
+        let cryptoAPI = {};
+        
+        async function initializeWasm() {
+            if (!wasmInitialized) {
+                await init();
+                wasmInitialized = true;
+                
+                // Экспортируем функции в глобальную область видимости
+                cryptoAPI = {
+                    generate_symmetric_key,
+                    encrypt_symmetric,
+                    decrypt_symmetric,
+                    generate_asymmetric_keypair,
+                    encrypt_asymmetric,
+                    decrypt_asymmetric,
+                    hash_sha256,
+                    generate_random_bytes
+                };
+                
+                window.cryptoAPI = cryptoAPI;
+                console.log('✅ WASM Crypto API loaded! Available as window.cryptoAPI');
+            }
         }
-
-        run().catch(console.error);
+        
+        // ========== Обработчики для интерфейса ==========
+        
+        async function generateSymmetricKey() {
+            await initializeWasm();
+            try {
+                const key = await cryptoAPI.generate_symmetric_key();
+                document.getElementById('symmetricKey').value = key;
+                document.getElementById('symmetricResult').innerHTML = 
+                    `<strong>Ключ сгенерирован:</strong> ${key.substring(0, 50)}...`;
+                console.log('Symmetric key:', key);
+            } catch (error) {
+                document.getElementById('symmetricResult').innerHTML = 
+                    `<strong>Ошибка:</strong> ${error}`;
+            }
+        }
+        
+        async function encryptSymmetric() {
+            await initializeWasm();
+            try {
+                const plaintext = document.getElementById('symmetricText').value;
+                const key = document.getElementById('symmetricKey').value;
+                
+                if (!key) {
+                    alert('Сначала сгенерируйте ключ!');
+                    return;
+                }
+                
+                const encrypted = await cryptoAPI.encrypt_symmetric(plaintext, key);
+                document.getElementById('symmetricResult').innerHTML = 
+                    `<strong>Зашифровано:</strong><br>${encrypted}`;
+                console.log('Encrypted (JSON):', encrypted);
+            } catch (error) {
+                document.getElementById('symmetricResult').innerHTML = 
+                    `<strong>Ошибка шифрования:</strong> ${error}`;
+            }
+        }
+        
+        async function decryptSymmetric() {
+            await initializeWasm();
+            try {
+                const key = document.getElementById('symmetricKey').value;
+                const resultText = document.getElementById('symmetricResult').textContent;
+                
+                if (!resultText.includes('Зашифровано:')) {
+                    alert('Сначала зашифруйте что-нибудь!');
+                    return;
+                }
+                
+                // Извлекаем JSON из результата
+                const jsonMatch = resultText.match(/{.*}/s);
+                if (!jsonMatch) {
+                    alert('Не найдены данные для расшифровки!');
+                    return;
+                }
+                
+                const decrypted = await cryptoAPI.decrypt_symmetric(jsonMatch[0], key);
+                document.getElementById('symmetricResult').innerHTML = 
+                    `<strong>Расшифровано:</strong> ${decrypted}`;
+                console.log('Decrypted:', decrypted);
+            } catch (error) {
+                document.getElementById('symmetricResult').innerHTML = 
+                    `<strong>Ошибка расшифровки:</strong> ${error}`;
+            }
+        }
+        
+        async function generateAsymmetricKeypair() {
+            await initializeWasm();
+            try {
+                const keypairJson = await cryptoAPI.generate_asymmetric_keypair();
+                const keypair = JSON.parse(keypairJson);
+                
+                document.getElementById('privateKey').value = keypair.private_key;
+                document.getElementById('publicKey').value = keypair.public_key;
+                
+                document.getElementById('asymmetricResult').innerHTML = 
+                    `<strong>Ключевая пара сгенерирована!</strong><br>
+                     <small>Приватный ключ: ${keypair.private_key.substring(0, 50)}...</small>`;
+                console.log('Keypair generated');
+            } catch (error) {
+                document.getElementById('asymmetricResult').innerHTML = 
+                    `<strong>Ошибка:</strong> ${error}`;
+            }
+        }
+        
+        async function encryptAsymmetric() {
+            await initializeWasm();
+            try {
+                const plaintext = document.getElementById('asymmetricText').value;
+                const publicKey = document.getElementById('publicKey').value;
+                
+                if (!publicKey) {
+                    alert('Сначала сгенерируйте ключевую пару!');
+                    return;
+                }
+                
+                const encrypted = await cryptoAPI.encrypt_asymmetric(plaintext, publicKey);
+                document.getElementById('asymmetricResult').innerHTML = 
+                    `<strong>Зашифровано (hex):</strong><br>${encrypted}`;
+                console.log('RSA Encrypted:', encrypted);
+            } catch (error) {
+                document.getElementById('asymmetricResult').innerHTML = 
+                    `<strong>Ошибка шифрования:</strong> ${error}`;
+            }
+        }
+        
+        async function decryptAsymmetric() {
+            await initializeWasm();
+            try {
+                const privateKey = document.getElementById('privateKey').value;
+                const resultText = document.getElementById('asymmetricResult').textContent;
+                
+                if (!resultText.includes('Зашифровано')) {
+                    alert('Сначала зашифруйте что-нибудь!');
+                    return;
+                }
+                
+                // Извлекаем hex из результата
+                const hexMatch = resultText.match(/([0-9a-f]{100,})/i);
+                if (!hexMatch) {
+                    alert('Не найдены данные для расшифровки!');
+                    return;
+                }
+                
+                const decrypted = await cryptoAPI.decrypt_asymmetric(hexMatch[1], privateKey);
+                document.getElementById('asymmetricResult').innerHTML = 
+                    `<strong>Расшифровано:</strong> ${decrypted}`;
+                console.log('RSA Decrypted:', decrypted);
+            } catch (error) {
+                document.getElementById('asymmetricResult').innerHTML = 
+                    `<strong>Ошибка расшифровки:</strong> ${error}`;
+            }
+        }
+        
+        async function generateRandomBytes() {
+            await initializeWasm();
+            try {
+                const bytes = await cryptoAPI.generate_random_bytes(32);
+                document.getElementById('utilsResult').innerHTML = 
+                    `<strong>32 случайных байта (hex):</strong><br>${bytes}`;
+                console.log('Random bytes:', bytes);
+            } catch (error) {
+                document.getElementById('utilsResult').innerHTML = 
+                    `<strong>Ошибка:</strong> ${error}`;
+            }
+        }
+        
+        async function hashData() {
+            await initializeWasm();
+            try {
+                const data = document.getElementById('hashText').value;
+                const hash = await cryptoAPI.hash_sha256(data);
+                document.getElementById('utilsResult').innerHTML = 
+                    `<strong>SHA-256 хеш:</strong><br>${hash}`;
+                console.log('SHA-256:', hash);
+            } catch (error) {
+                document.getElementById('utilsResult').innerHTML = 
+                    `<strong>Ошибка:</strong> ${error}`;
+            }
+        }
+        
+        // Инициализируем при загрузке
+        initializeWasm().catch(console.error);
+        
+        // Экспортируем для консоли разработчика
+        window.initCrypto = initializeWasm;
     </script>
 </body>
 </html>
